@@ -1,5 +1,4 @@
 import socket
-import time
 
 ESP32_IP = "192.168.1.1"  # ESP32 AP IP address
 TCP_PORT = 4210 # Port number to connect to the ESP32
@@ -12,15 +11,12 @@ def loop():
                 print(f"Connecting to {ESP32_IP}:{TCP_PORT}")
                 sock.connect((ESP32_IP, TCP_PORT)) # Connect to the ESP32
 
-                # Receive data from the ESP32
-                data = sock.recv(2048)
-                print("Received:", data.decode())
-
-                sock.close() # Close the socket after receiving data
-        except (socket.timeout, ConnectionRefusedError) as e: # Handle timeout or connection refused
-            print("No response or connection refused:", e)
-
-        time.sleep(1) # Wait before trying again
+                while True: # Keeps waiting for new data to arrive
+                  data = sock.recv(2048)
+                  if data:
+                    print("Received:", data.decode())
+        except (socket.timeout, ConnectionRefusedError) as error: # Handle timeout or connection refused
+            print("No response or connection refused:", error)
 
 
 if __name__ == "__main__":

@@ -19,6 +19,9 @@ IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 255, 0);
 
 WiFiServer server(TCP_PORT); // Create a TCP server on the specified port
+WiFiClient client;
+
+unsigned long lastSendTime = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -32,17 +35,25 @@ void setup() {
 }
 
 void loop() {
-  WiFiClient client = server.available();  // Check for incoming client connection
+  // Accept new client if none are connected
+  if (!client || !client.connected()) { // Check if there is no client connected
+    client = server.available(); // Check for new client connections
+    if (client) {
+      Serial.println("Client connected");
+    }
+  }
+ // Send data if client is connected
+  if (client && client.connected()) {
+    unsigned long now = millis();
+    if (now - lastSendTime > 300) { // Interval between data batches
+      lastSendTime = now; 
 
-  if (client) {
-    Serial.println("Client connected");
-
-    client.println("Hello from ESP32 via TCP!"); // Send a message to the connected client
-
-    // Closing the client connection after sending the message
-    client.stop();
-    Serial.println("Client disconnected");
+      int fakeSensorValue = 5; // Sent data
+      client.printf("Sensor value: %d\n", fakeSensorValue); // Sends a string + data
+      Serial.println("Sent sensor value");
+    }
   }
 
-  delay(1000);
+  delay(10);
 }
+

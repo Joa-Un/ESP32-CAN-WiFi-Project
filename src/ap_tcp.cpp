@@ -1,34 +1,40 @@
-#include <WebServer.h>
 #include <WiFi.h>
-#include <WiFiUdp.h>
+#include <WiFiServer.h>
 
-#define CONSOLE_IP "192.168.1.2" // Receiving computer's IP address in the local network
-#define CONSOLE_PORT 4210 // Shared port for sending UDP packets
+#define TCP_PORT 4210
 
-const char* ssid = "ESP32_AP"; // WiFi Access Point SSID
-const char* password = "12345678"; // WiFi Access Point password
+const char* ssid = "ESP32_AP";
+const char* password = "12345678";
 
-// Creates a WiFiUDP object, used to send and receive UDP packets over Wi-Fi.
-WiFiUDP Udp;
 IPAddress local_ip(192, 168, 1, 1);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 255, 0);
 
-void setup()
-{
+WiFiServer server(TCP_PORT);
+
+void setup() {
   Serial.begin(115200);
-  // Creates a WiFi Access Point with the specified SSID and password.
+
   WiFi.softAP(ssid, password);
   WiFi.softAPConfig(local_ip, gateway, subnet);
 
-  Udp.begin(4210); // Starts the UDP server on port 4210
+  server.begin();
+  Serial.printf("TCP server started on port %d\n", TCP_PORT);
 }
+
 void loop() {
-  // Sends a UDP packet to the specified console IP and port every second.
-  Serial.printf("Sending UDP packet to %s:%d\n", CONSOLE_IP, CONSOLE_PORT);
-  Udp.beginPacket(CONSOLE_IP, CONSOLE_PORT);
-  Udp.print("Hello from ESP32!");
-  Udp.endPacket();
+  WiFiClient client = server.available();  // Check for incoming client connection
+
+  if (client) {
+    Serial.println("Client connected");
+
+    // Send a message to the connected client
+    client.println("Hello from ESP32 via TCP!");
+
+    // You can keep client connected or close after sending:
+    client.stop();
+    Serial.println("Client disconnected");
+  }
 
   delay(1000);
 }

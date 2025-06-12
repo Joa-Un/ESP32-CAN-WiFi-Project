@@ -1,3 +1,5 @@
+# Receiver script for ESP32 TCP communication.
+# This script connects to an ESP32 device over TCP and listens for incoming data.
 import socket
 
 ESP32_IP = "192.168.1.1"  # ESP32 AP IP address

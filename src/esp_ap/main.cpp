@@ -5,6 +5,11 @@ AP code for an ESP32 sending data to a station PC
 
 #include <WiFi.h>
 #include <WiFiServer.h>
+#include "driver/twai.h"
+#include <HardwareSerial.h>
+
+#define TX_GPIO_NUM GPIO_NUM_21
+#define RX_GPIO_NUM GPIO_NUM_22
 
 #define TCP_PORT 4210 // Shared port for TCP communication
 
@@ -21,15 +26,44 @@ WiFiClient client; // Client to handle incoming connections
 
 unsigned long lastSendTime = 0; // Variable used in timing logic
 
-void setup() {
-  Serial.begin(115200);
+void configureCan() {
+  //Configures TWAI controller. TWAI is ESPRessifs own Two-Wire Automotive Interface, which is CAN bus compatible.
+  twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(TX_GPIO_NUM, RX_GPIO_NUM, TWAI_MODE_NORMAL); // General settings, like pins and
+  twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS(); // Set the bitrat to 500 kbps
+  twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL(); // Accept all messages, no filtering
 
-  // Initialize WiFi in Access Point mode
+  // Installs TWAI driver into the ESP32
+  if (twai_driver_install(&g_config, &t_config, &f_config) != ESP_OK) {
+    Serial.println("Failed to install TWAI driver");
+    while (true); //Stops the program by looping forever if the driver install fails
+  }
+
+  // Starts the TWAI driver
+  if (twai_start() != ESP_OK) {
+    Serial.println("Failed to start TWAI driver");
+    while (true); //Stops the program by looping forever if the driver install fails
+  }
+
+  Serial.println("TWAI receiver started");
+}
+
+void configureTcp() {
+  // Start the TCP server
   WiFi.softAP(ssid, password);
   WiFi.softAPConfig(local_ip, gateway, subnet);
 
   server.begin(); // Start the TCP server
   Serial.printf("TCP server started on port %d\n", TCP_PORT);
+}
+
+
+
+
+void setup() {
+  Serial.begin(115200);
+
+  configureTcp(); // Configure the TCP server
+  configureCan(); // Configure the CAN interface
 }
 
 void loop() {

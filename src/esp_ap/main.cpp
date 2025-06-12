@@ -1,7 +1,6 @@
-/* 
+/*
 AP code for an ESP32 sending data to a station PC
 */
-
 
 #include <WiFi.h>
 #include <WiFiServer.h>
@@ -21,13 +20,31 @@ IPAddress local_ip(192, 168, 1, 1);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 255, 0);
 
+int receivedData = 5; // Placeholder for received CAN data, can be replaced with actual data from the CAN bus
+
 WiFiServer server(TCP_PORT); // Create a TCP server on the specified port
 WiFiClient client; // Client to handle incoming connections
 
 unsigned long lastSendTime = 0; // Variable used in timing logic
 
+/*
+@brief This function configures the ESP32 to act as a WiFi access point.
+*/
+void configureWifi() {
+  // Start the TCP server
+  WiFi.softAP(ssid, password);
+  WiFi.softAPConfig(local_ip, gateway, subnet);
+  server.begin(); // Start the TCP server
+  Serial.printf("TCP server started on port %d\n", TCP_PORT);
+}
+
+/*
+ @brief Configures and starts the TWAI (CAN) driver on the ESP32.
+ Sets up general, timing, and filter configurations and ensures the driver is started.
+ The system halts if initialization fails.
+ */
 void configureCan() {
-  //Configures TWAI controller. TWAI is ESPRessifs own Two-Wire Automotive Interface, which is CAN bus compatible.
+  // Configures TWAI controller. TWAI is ESPRessifs own Two-Wire Automotive Interface, which is CAN bus compatible.
   twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(TX_GPIO_NUM, RX_GPIO_NUM, TWAI_MODE_NORMAL); // General settings, like pins and
   twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS(); // Set the bitrat to 500 kbps
   twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL(); // Accept all messages, no filtering
@@ -46,45 +63,37 @@ void configureCan() {
 
   Serial.println("TWAI receiver started");
 }
-
-void configureTcp() {
-  // Start the TCP server
-  WiFi.softAP(ssid, password);
-  WiFi.softAPConfig(local_ip, gateway, subnet);
-
-  server.begin(); // Start the TCP server
-  Serial.printf("TCP server started on port %d\n", TCP_PORT);
-}
-
-
-
-
-void setup() {
-  Serial.begin(115200);
-
-  configureTcp(); // Configure the TCP server
-  configureCan(); // Configure the CAN interface
-}
-
-void loop() {
-  // Accept new client if none are connected
+/*
+@brief Sends data to the connected client.
+Checks if the client is connected, and if not, it attempts to accept a new connection.
+@param: canData - The data to be sent to the client. Received from the CAN bus
+*/
+void sendData(int canData) {
   if (!client || !client.connected()) { // Check if client object is invalid or disconnected
     client = server.available(); // Check if there is a new client trying to connect. Return a client object if a connection is available, otherwise returns an invalid client object.
     if (client) {
       Serial.println("Client connected");
     }
   }
- // Timing logic for data sending
-  if (client && client.connected()) {
-    unsigned long now = millis();
-    if (now - lastSendTime > 300) { // Interval between data batches
-      lastSendTime = now; 
-
-      int fakeSensorValue = 5;
-      client.printf("Sensor value: %d\n", fakeSensorValue); // Send a string + data
-      Serial.println("Sent sensor value");
-    }
-  }
-  delay(10);
+  if (client && client.connected()) { // If 
+    client.printf("Sensor value: %d\n", canData); // Send a string + data
+    Serial.println("Sent sensor value");
+  } 
 }
 
+/*
+@brief Initializes the system: sets up Wi-Fi and CAN.
+*/
+void setup() {
+  Serial.begin(115200);
+  configureWifi(); // Configure the TCP server
+  configureCan(); // Configure the CAN interface
+}
+
+/*
+@brief Main loop of the program.
+*/
+void loop() {
+  sendData(receivedData); // Send initial data to the client
+  delay(1000);
+}

@@ -39,33 +39,33 @@ void configureWifi() {
 }
 
 /*
- @brief Configures and starts the TWAI (CAN) driver on the ESP32.
- Sets up general, timing, and filter configurations and ensures the driver is started.
- The system halts if initialization fails.
- */
+@brief Configures and starts the TWAI (CAN) driver on the ESP32.
+Set up general, timing, and filter configurations and ensurs the driver is started.
+The system halts if initialization fails.
+*/
 void configureCan() {
-  // Configures TWAI controller. TWAI is ESPRessifs own Two-Wire Automotive Interface, which is CAN bus compatible.
+  // Configure TWAI controller. TWAI is ESPRessifs own Two-Wire Automotive Interface, which is CAN bus compatible.
   twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(TX_GPIO_NUM, RX_GPIO_NUM, TWAI_MODE_NORMAL); // General settings, like pins and
   twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS(); // Set the bitrat to 500 kbps
   twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL(); // Accept all messages, no filtering
 
-  // Installs TWAI driver into the ESP32
+  // Install TWAI driver into the ESP32
   if (twai_driver_install(&g_config, &t_config, &f_config) != ESP_OK) {
     Serial.println("Failed to install TWAI driver");
     while (true); //Stops the program by looping forever if the driver install fails
   }
 
-  // Starts the TWAI driver
+  // Start the TWAI driver
   if (twai_start() != ESP_OK) {
     Serial.println("Failed to start TWAI driver");
-    while (true); //Stops the program by looping forever if the driver install fails
+    while (true); //Stop the program by looping forever if the driver install fails
   }
 
   Serial.println("TWAI receiver started");
 }
 /*
-@brief Sends data to the connected client.
-Checks if the client is connected, and if not, it attempts to accept a new connection.
+@brief Send data to the connected client.
+Check if the client is connected, and if not, it attempts to accept a new connection.
 @param: canData - The data to be sent to the client. Received from the CAN bus
 */
 void sendData(int canData) {
@@ -75,14 +75,14 @@ void sendData(int canData) {
       Serial.println("Client connected");
     }
   }
-  if (client && client.connected()) { // If 
+  if (client && client.connected()) {
     client.printf("Sensor value: %d\n", canData); // Send a string + data
     Serial.println("Sent sensor value");
   } 
 }
 
 /*
-@brief Initializes the system: sets up Wi-Fi and CAN.
+@brief Initialize the system: set up Wi-Fi and CAN.
 */
 void setup() {
   Serial.begin(115200);

@@ -1,5 +1,6 @@
 /*
-AP code for an ESP32 sending data to a station PC
+This code sets up an ESP32 as a WiFi access point and a TCP server that listens for incoming connections.
+It receives CAN messages from the CAN bus and sends them to connected clients over TCP.
 */
 
 #include <WiFi.h>
@@ -20,18 +21,13 @@ IPAddress local_ip(192, 168, 1, 1);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 255, 0);
 
-
-
 WiFiServer server(TCP_PORT); // Create a TCP server on the specified port
 WiFiClient client; // Client to handle incoming connections
-
-unsigned long lastSendTime = 0; // Variable used in timing logic
 
 /*
 @brief This function configures the ESP32 to act as a WiFi access point.
 */
 void configureWifi() {
-  // Start the TCP server
   WiFi.softAP(ssid, password);
   WiFi.softAPConfig(local_ip, gateway, subnet);
   server.begin(); // Start the TCP server
@@ -45,30 +41,30 @@ The system halts if initialization fails.
 */
 void configureCan() {
   // Configure TWAI controller. TWAI is ESPRessifs own Two-Wire Automotive Interface, which is CAN bus compatible.
-  twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(TX_GPIO_NUM, RX_GPIO_NUM, TWAI_MODE_NORMAL); // General settings, like pins and
+  twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(TX_GPIO_NUM, RX_GPIO_NUM, TWAI_MODE_NORMAL);
   twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS(); // Set the bitrat to 500 kbps
   twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL(); // Accept all messages, no filtering
 
   // Install TWAI driver into the ESP32
   if (twai_driver_install(&g_config, &t_config, &f_config) != ESP_OK) {
     Serial.println("Failed to install TWAI driver");
-    while (true); //Stops the program by looping forever if the driver install fails
+    while (true); // Stop the program by looping forever if the driver install fails
   }
 
   // Start the TWAI driver
   if (twai_start() != ESP_OK) {
     Serial.println("Failed to start TWAI driver");
-    while (true); //Stop the program by looping forever if the driver install fails
+    while (true); // Stop the program by looping forever if the driver install fails
   }
 
   Serial.println("TWAI receiver started");
 }
+
 /*
 @brief Send data to the connected client.
 Check if the client is connected, and if not, it attempts to accept a new connection.
 @param: canData - The data to be sent to the client. Received from the CAN bus
 */
-
 void sendData(char* canDataStr) {
   if (!client || !client.connected()) { // Check if client object is invalid or disconnected
     client = server.available(); // Check if there is a new client trying to connect. Return a client object if a connection is available, otherwise returns an invalid client object.
@@ -82,9 +78,13 @@ void sendData(char* canDataStr) {
   } 
 }
 
+/*
+@brief Receive CAN data and send it to the connected client.
+This function waits for a CAN message, and if one is received, it formats the data into a string and sends it to the client
+*/
 void receiveCanData() {
   twai_message_t rx_msg; // Structure that's defined in the CAN Sender code
-  // Tries to receive the message with 100ms timeout window
+  // Try to receive the message within 100ms timeout window
   if (twai_receive(&rx_msg, pdMS_TO_TICKS(100)) == ESP_OK) {
     Serial.print("Received ID: 0x");
     Serial.print(rx_msg.identifier, HEX);
@@ -94,7 +94,7 @@ void receiveCanData() {
     }
     Serial.println();
 
-    // Let's send the entire 4-byte data as a hex string to the client:
+    // Transform the received CAN data into a string for sending over TCP
     char canDataStr[3 * rx_msg.data_length_code + 1]; // Enough space for "XX XX XX XX\0"
     int pos = 0;
     for (int i = 0; i < rx_msg.data_length_code; i++) {
@@ -105,6 +105,7 @@ void receiveCanData() {
     sendData(canDataStr);
   }
 }
+
 /*
 @brief Initialize the system: set up Wi-Fi and CAN.
 */

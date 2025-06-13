@@ -1,5 +1,5 @@
-//Test code for sending CAN messages from one ESP32 to another
-//Sender ESP32
+// Test code for sending CAN messages from one ESP32 to another
+// Generates sensor-like CAN messages and send them over the CAN bus.
 
 #include <Arduino.h>
 #include "driver/twai.h"
@@ -16,23 +16,22 @@ void setup() {
   twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS();
   twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
 
-  //Installs TWAI driver
+  // Install TWAI driver
   if (twai_driver_install(&g_config, &t_config, &f_config) != ESP_OK) {
     Serial.println("Failed to install TWAI driver");
-    while (true); //Stops the program by looping forever if the driver install fails
+    while (true); // Stop the program by looping forever if the driver install fails
   }
 
-  //Start TWAI driver
+  // Start TWAI driver
   if (twai_start() != ESP_OK) {
     Serial.println("Failed to start TWAI driver");
-    while (true); //Stops the program by looping forever if the driver install fails
+    while (true); // Stop the program by looping forever if the driver install fails
   }
-
   Serial.println("TWAI initialized successfully");
 }
 
 void loop() {
-  // Creates the CAN message
+  // Create the CAN message
   twai_message_t tx_msg; // CAN message structure
   tx_msg.identifier = 0x100; // CAN message ID
   tx_msg.extd = 0;  // Standard frame
@@ -46,10 +45,16 @@ void loop() {
 
   // Transmit message
   if (twai_transmit(&tx_msg, pdMS_TO_TICKS(1000)) == ESP_OK) {
-    Serial.println("CAN data sent");
+    Serial.print("CAN data sent: ");
+    // Print the message ID and data
+    for (int i = 0; i < 4; i++) {
+      if (tx_msg.data[i] < 0x10) Serial.print("0"); 
+      Serial.print(tx_msg.data[i], HEX);
+      Serial.print(" ");
+      }
+    Serial.println();
   } else {
     Serial.println("Failed to send CAN data");
   }
-
   delay(1000); // Interval between messages
 }

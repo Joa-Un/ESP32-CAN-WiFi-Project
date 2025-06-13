@@ -1,3 +1,4 @@
 Test project between two ESP32's and a computer.
 
-ESP2 generates IMU sensor readings and sends them over can to ESP1, which sends them over to a PC via Wi-Fi using TCP packets.
+esp_sensor generates random CAN data and sends them over CAN to esp_ap, which sends them over to a PC running a python script via Wi-Fi using TCP packets.
+

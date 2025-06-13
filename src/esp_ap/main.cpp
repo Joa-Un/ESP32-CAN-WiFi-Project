@@ -20,7 +20,7 @@ IPAddress local_ip(192, 168, 1, 1);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 255, 0);
 
-int receivedData = 5; // Placeholder for received CAN data, can be replaced with actual data from the CAN bus
+
 
 WiFiServer server(TCP_PORT); // Create a TCP server on the specified port
 WiFiClient client; // Client to handle incoming connections
@@ -68,7 +68,8 @@ void configureCan() {
 Check if the client is connected, and if not, it attempts to accept a new connection.
 @param: canData - The data to be sent to the client. Received from the CAN bus
 */
-void sendData(int canData) {
+
+void sendData(char* canDataStr) {
   if (!client || !client.connected()) { // Check if client object is invalid or disconnected
     client = server.available(); // Check if there is a new client trying to connect. Return a client object if a connection is available, otherwise returns an invalid client object.
     if (client) {
@@ -76,8 +77,8 @@ void sendData(int canData) {
     }
   }
   if (client && client.connected()) {
-    client.printf("Sensor value: %d\n", canData); // Send a string + data
-    Serial.println("Sent sensor value");
+    client.printf(canDataStr);
+    Serial.println("Sent CAN message");
   } 
 }
 
@@ -93,10 +94,17 @@ void receiveCanData() {
     }
     Serial.println();
 
-    sendData(receivedData); // Send initial data to the client
+    // Let's send the entire 4-byte data as a hex string to the client:
+    char canDataStr[3 * rx_msg.data_length_code + 1]; // Enough space for "XX XX XX XX\0"
+    int pos = 0;
+    for (int i = 0; i < rx_msg.data_length_code; i++) {
+      pos += snprintf(&canDataStr[pos], sizeof(canDataStr) - pos, "%02X ", rx_msg.data[i]);
+    }
+    canDataStr[pos - 1] = '\0'; // Remove last space and terminate string
+
+    sendData(canDataStr);
   }
 }
-
 /*
 @brief Initialize the system: set up Wi-Fi and CAN.
 */

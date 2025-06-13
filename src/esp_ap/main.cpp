@@ -74,7 +74,7 @@ void sendData(char* canDataStr) {
   }
   if (client && client.connected()) {
     client.printf(canDataStr);
-    Serial.println("Sent CAN message");
+    Serial.println("Sent CAN data over Wi-Fi");
   } 
 }
 

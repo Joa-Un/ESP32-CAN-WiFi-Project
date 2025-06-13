@@ -81,6 +81,22 @@ void sendData(int canData) {
   } 
 }
 
+void receiveCanData() {
+  twai_message_t rx_msg; // Structure that's defined in the CAN Sender code
+  // Tries to receive the message with 100ms timeout window
+  if (twai_receive(&rx_msg, pdMS_TO_TICKS(100)) == ESP_OK) {
+    Serial.print("Received ID: 0x");
+    Serial.print(rx_msg.identifier, HEX);
+    Serial.print(" Data: ");
+    for (int i = 0; i < rx_msg.data_length_code; i++) {
+      Serial.printf("%02X ", rx_msg.data[i]);
+    }
+    Serial.println();
+
+    sendData(receivedData); // Send initial data to the client
+  }
+}
+
 /*
 @brief Initialize the system: set up Wi-Fi and CAN.
 */
@@ -94,6 +110,6 @@ void setup() {
 @brief Main loop of the program.
 */
 void loop() {
-  sendData(receivedData); // Send initial data to the client
-  delay(1000);
+  receiveCanData(); // Receive CAN data
+  delay(10);
 }

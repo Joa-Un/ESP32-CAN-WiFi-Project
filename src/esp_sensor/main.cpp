@@ -1,10 +1,53 @@
-// Code for generating sensor data and sending it over CAN to a AP ESP32, which sends it to a PC over TCP/IP.
+//Test code for sending CAN messages from one ESP32 to another
+//Sender ESP32
 
-#include <Arduino.h>
+#include "driver/twai.h"
+#include <HardwareSerial.h>
+
+#define TX_GPIO_NUM GPIO_NUM_21
+#define RX_GPIO_NUM GPIO_NUM_22
+
 void setup() {
-  // alustuskoodi
+  Serial.begin(115200);
+
+  //Configures TWAI controller
+  twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(TX_GPIO_NUM, RX_GPIO_NUM, TWAI_MODE_NORMAL);
+  twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS();
+  twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
+
+  //Installs TWAI driver
+  if (twai_driver_install(&g_config, &t_config, &f_config) != ESP_OK) {
+    Serial.println("Failed to install TWAI driver");
+    while (true); //Stops the program by looping forever if the driver install fails
+  }
+
+  //Start TWAI driver
+  if (twai_start() != ESP_OK) {
+    Serial.println("Failed to start TWAI driver");
+    while (true); //Stops the program by looping forever if the driver install fails
+  }
+
+  Serial.println("TWAI initialized successfully");
 }
 
 void loop() {
-  // pääsilmukka
+  //Creates the can message
+  twai_message_t tx_msg; //Can message structure
+  tx_msg.identifier = 0x100; //CAN message ID
+  tx_msg.extd = 0;  //Standard frame
+  tx_msg.rtr = 0;   //Data frame
+  tx_msg.data_length_code = 4; //Byte amount
+  tx_msg.data[0] = 0xDE;
+  tx_msg.data[1] = 0xAD;
+  tx_msg.data[2] = 0xBE;
+  tx_msg.data[3] = 0xEF;
+
+  // Transmit message
+  if (twai_transmit(&tx_msg, pdMS_TO_TICKS(1000)) == ESP_OK) { //Transmits the message and checks, if any errors came up.
+    Serial.println("Message sent");
+  } else {
+    Serial.println("Failed to send message");
+  }
+
+  delay(1000); //Interval between messages
 }
